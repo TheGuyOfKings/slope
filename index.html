@@ -3,52 +3,31 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Slope 3D - iPad Touch Edition</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <title>Slope 3D - Touch Edition</title>
     <link rel="stylesheet" href="TemplateData/style.css">
+    <script src="TemplateData/UnityProgress.js"></script>
+    <script src="Build/UnityLoader.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; }
-        #game-container { width: 100vw; height: 100vh; }
-        /* Touch Overlay Zones */
-        .touch-zone {
-            position: absolute; top: 0; bottom: 0; width: 50%; z-index: 10;
-            -webkit-tap-highlight-color: transparent;
-        }
-        #left-zone { left: 0; }
-        #right-zone { right: 0; }
+        #gameContainer { width: 100vw; height: 100vh; }
+        .touch-zone { position: absolute; top: 0; bottom: 0; width: 50%; z-index: 999; }
+        #left-btn { left: 0; } #right-btn { right: 0; }
     </style>
 </head>
 <body>
-    <div id="game-container">
-        <canvas id="unity-canvas"></canvas>
-    </div>
-
-    <!-- Touch Zones for iPad -->
-    <div id="left-zone" class="touch-zone"></div>
-    <div id="right-zone" class="touch-zone"></div>
-
-    <script src="Build/UnityLoader.js"></script>
+    <div id="gameContainer"></div>
+    <div id="left-btn" class="touch-zone"></div>
+    <div id="right-btn" class="touch-zone"></div>
     <script>
-        // Load the original Unity game
-        var unityInstance = UnityLoader.instantiate("unity-canvas", "Build/Slope.json");
-
-        // Touch Control Logic
-        function simulateKey(code, type) {
-            window.dispatchEvent(new KeyboardEvent(type, {
-                key: code, keyCode: (code === "ArrowLeft" ? 37 : 39),
-                code: code, which: (code === "ArrowLeft" ? 37 : 39),
-                bubbles: true
-            }));
+        var gameInstance = UnityLoader.instantiate("gameContainer", "Build/slope.json");
+        function sendKey(key, type) {
+            const e = new KeyboardEvent(type, { key: key, code: key, bubbles: true });
+            document.querySelector("canvas").dispatchEvent(e);
         }
-
-        const left = document.getElementById("left-zone");
-        const right = document.getElementById("right-zone");
-
-        left.addEventListener("touchstart", (e) => { e.preventDefault(); simulateKey("ArrowLeft", "keydown"); });
-        left.addEventListener("touchend", () => simulateKey("ArrowLeft", "keyup"));
-        
-        right.addEventListener("touchstart", (e) => { e.preventDefault(); simulateKey("ArrowRight", "keydown"); });
-        right.addEventListener("touchend", () => simulateKey("ArrowRight", "keyup"));
+        document.getElementById("left-btn").addEventListener("touchstart", (e) => { e.preventDefault(); sendKey("ArrowLeft", "keydown"); });
+        document.getElementById("left-btn").addEventListener("touchend", () => sendKey("ArrowLeft", "keyup"));
+        document.getElementById("right-btn").addEventListener("touchstart", (e) => { e.preventDefault(); sendKey("ArrowRight", "keydown"); });
+        document.getElementById("right-btn").addEventListener("touchend", () => sendKey("ArrowRight", "keyup"));
     </script>
 </body>
 </html>
