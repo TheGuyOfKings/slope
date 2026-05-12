@@ -6,28 +6,131 @@
     <title>Slope 3D - Touch Edition</title>
     <link rel="stylesheet" href="TemplateData/style.css">
     <script src="TemplateData/UnityProgress.js"></script>
-    <script src="Build/UnityLoader.js"></script>
     <style>
         body { margin: 0; overflow: hidden; background: #000; }
-        #gameContainer { width: 100vw; height: 100vh; }
-        .touch-zone { position: absolute; top: 0; bottom: 0; width: 50%; z-index: 999; }
+        #gameContainer { width: 100vw; height: 100vh; position: relative; }
+        .touch-zone { position: absolute; top: 0; bottom: 0; width: 50%; z-index: 999; touch-action: none; }
         #left-btn { left: 0; } #right-btn { right: 0; }
+        #unity-message {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            padding: 1rem;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+            font-size: 1rem;
+        }
     </style>
 </head>
 <body>
     <div id="gameContainer"></div>
+    <div id="unity-message">Loading... if this screen remains, the Unity loader is missing or failed to initialize.</div>
     <div id="left-btn" class="touch-zone"></div>
     <div id="right-btn" class="touch-zone"></div>
     <script>
-        var gameInstance = UnityLoader.instantiate("gameContainer", "Build/slope.json");
-        function sendKey(key, type) {
-            const e = new KeyboardEvent(type, { key: key, code: key, bubbles: true });
-            document.querySelector("canvas").dispatchEvent(e);
+        const unityMessage = document.getElementById("unity-message");
+
+        function showUnityMessage(message) {
+            if (unityMessage) {
+                unityMessage.textContent = message;
+                unityMessage.style.display = "flex";
+            }
+            console.error(message);
         }
-        document.getElementById("left-btn").addEventListener("touchstart", (e) => { e.preventDefault(); sendKey("ArrowLeft", "keydown"); });
-        document.getElementById("left-btn").addEventListener("touchend", () => sendKey("ArrowLeft", "keyup"));
-        document.getElementById("right-btn").addEventListener("touchstart", (e) => { e.preventDefault(); sendKey("ArrowRight", "keydown"); });
-        document.getElementById("right-btn").addEventListener("touchend", () => sendKey("ArrowRight", "keyup"));
+
+        function hideUnityMessage() {
+            if (unityMessage) {
+                unityMessage.style.display = "none";
+            }
+        }
+
+        function getUnityCanvas() {
+            return document.querySelector("#gameContainer canvas");
+        }
+
+        function sendKey(key, type) {
+            const canvas = getUnityCanvas();
+            if (!canvas) {
+                console.warn("Unity canvas not ready yet; input ignored.");
+                return;
+            }
+            const event = new KeyboardEvent(type, {
+                key,
+                code: key,
+                bubbles: true,
+                cancelable: true
+            });
+            canvas.dispatchEvent(event);
+        }
+
+        function bindTouchButton(id, key) {
+            const button = document.getElementById(id);
+            if (!button) return;
+            const endHandler = (event) => {
+                event.preventDefault();
+                sendKey(key, "keyup");
+            };
+            button.addEventListener("touchstart", (event) => {
+                event.preventDefault();
+                sendKey(key, "keydown");
+            }, { passive: false });
+            button.addEventListener("touchend", endHandler, { passive: false });
+            button.addEventListener("touchcancel", endHandler, { passive: false });
+        }
+
+        function instantiateUnity() {
+            if (window.UnityLoader && typeof UnityLoader.instantiate === "function") {
+                try {
+                    hideUnityMessage();
+                    window.gameInstance = UnityLoader.instantiate("gameContainer", "Build/slope.json");
+                } catch (error) {
+                    showUnityMessage("Unity failed to initialize: " + error.message);
+                }
+                return;
+            }
+
+            if (window.createUnityInstance) {
+                hideUnityMessage();
+                const container = document.getElementById("gameContainer");
+                createUnityInstance(container, {
+                    dataUrl: "Build/slope_data.unityweb",
+                    wasmCodeUrl: "Build/slope_wasmcode.unityweb",
+                    wasmFrameworkUrl: "Build/slope_wasmframework.unityweb",
+                    streamingAssetsUrl: "StreamingAssets",
+                    companyName: "IDnet",
+                    productName: "Slope",
+                    productVersion: "1.0",
+                    backgroundColor: "#231F20"
+                }).then((instance) => {
+                    window.gameInstance = instance;
+                }).catch((error) => {
+                    showUnityMessage("Unity failed to initialize: " + error.message);
+                });
+                return;
+            }
+
+            showUnityMessage("Unity loader not found. Check that Build/UnityLoader.js exists and that the build path is correct.");
+        }
+
+        function loadScript(src, onload, onerror) {
+            const script = document.createElement("script");
+            script.src = src;
+            script.onload = onload;
+            script.onerror = onerror;
+            document.head.appendChild(script);
+        }
+
+        loadScript("Build/UnityLoader.js", instantiateUnity, () => {
+            showUnityMessage("Local UnityLoader.js not found. Please add Build/UnityLoader.js or use a supported loader script.");
+        });
+
+        bindTouchButton("left-btn", "ArrowLeft");
+        bindTouchButton("right-btn", "ArrowRight");
     </script>
 </body>
 </html>
